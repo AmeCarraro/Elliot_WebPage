@@ -9,23 +9,42 @@
     :root{
       --bg:#1e1e1e; --panel:#2b2b2b; --text:#ffffff; --muted:#cfcfcf; --accent:#58d0c6;
       --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --bot:#252a30; --user:#313a45;
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #3a3a3a;background:#222}
     header a{color:var(--text);text-decoration:none;opacity:.85}
     header a:hover{opacity:1}
-    main{max-width:1100px;margin:18px auto;padding:0 18px;display:grid;grid-template-columns:1fr;gap:18px}
+
+    /* layout: chat a sinistra, booking a destra */
+    main{max-width:1200px;margin:18px auto;padding:0 18px;display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+    @media (max-width:980px){main{grid-template-columns:1fr}}
+
     .card{background:var(--panel);border:1px solid #3a3a3a;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
     h2{margin:0 0 8px}
     p.muted{color:var(--muted);margin-top:0}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-    @media (max-width:900px){.row{grid-template-columns:1fr}}
-    a.link{color:var(--accent);text-decoration:none;font-weight:600}
-    a.link:hover{text-decoration:underline}
-    .btn{display:inline-block;background:var(--accent);color:#0d1b1b;font-weight:700;
-         padding:10px 14px;border-radius:10px;border:none;text-decoration:none;margin-right:10px}
+
+    /* CHAT */
+    .chat{display:flex;flex-direction:column;min-height:520px;height:72vh}
+    .chatlog{flex:1;overflow:auto;padding:12px;background:#191e23;border-radius:12px;border:1px solid #3a3a3a}
+    .row{display:flex;gap:10px;margin-top:10px}
+    .input{flex:1;background:#0f1419;border:1px solid #3a3a3a;border-radius:12px;color:var(--text);padding:12px}
+    button{cursor:pointer;border-radius:12px;border:1px solid #3a3a3a;background:#232a31;color:var(--text);padding:10px 14px}
+    button:hover{transform:translateY(-1px)}
+    .bubble{max-width:80%;padding:10px 12px;border-radius:14px;line-height:1.45;margin:6px 0;white-space:pre-wrap}
+    .bot{background:var(--bot);border:1px solid #3a3a3a;border-top-left-radius:6px}
+    .user{background:var(--user);border:1px solid #465364;border-top-right-radius:6px;margin-left:auto}
+    .time{font-size:11px;color:#b9c6d0;margin-top:2px}
+    .quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .pill{border:1px dashed #3a3a3a;background:#262c33;padding:8px 10px;border-radius:999px;font-size:13px}
+    .pill:hover{background:#2b323a}
+
+    /* BOOKING PANNELLO DESTRO */
+    .links a{color:var(--accent);text-decoration:none;font-weight:600}
+    .links a:hover{text-decoration:underline}
     iframe{width:100%;height:580px;border:0;border-radius:12px;background:#111}
+    .bloc{margin-bottom:18px}
   </style>
 
   <!-- Pulsanti popup ufficiali Google Calendar -->
@@ -39,65 +58,129 @@
   </header>
 
   <main>
-    <!-- Link rapidi -->
-    <section class="card">
-      <h2>Prenota subito</h2>
-      <p class="muted">Apri le pagine ufficiali di prenotazione (si aggiornano con le disponibilità reali).</p>
+    <!-- CHATBOT (guida alla scelta + apertura link) -->
+    <section class="card chat" aria-label="Chatbot prenotazioni">
+      <h2>Assistente prenotazioni</h2>
+      <div id="chatlog" class="chatlog" role="log" aria-live="polite"></div>
+      <div id="quick" class="quick"></div>
       <div class="row">
-        <div>
-          <h3>Sessione col Producer</h3>
-          <p><a class="link" href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ35XKkoq4STBVRs0s7OfnYur9gnnDQG1LzkUR72RFjFsqwHefJL20ky4vkpD1sMMME4LI8_wGvq?gv=true" target="_blank" rel="noopener">Apri pagina di prenotazione</a></p>
-          <div id="btnProducer"></div>
-        </div>
-        <div>
-          <h3>Affitto Stanzetta a ore</h3>
-          <p><a class="link" href="https://calendar.app.google/NDBChqmthG7cWDfM6" target="_blank" rel="noopener">Apri pagina di prenotazione</a></p>
-          <div id="btnRoom"></div>
-        </div>
+        <input id="input" class="input" placeholder="Scrivi 'sessione' o 'stanzetta'… (Invio per inviare)" autocomplete="off" />
+        <button id="send">Invia</button>
       </div>
+      <p class="muted" style="margin-top:8px">Il bot apre la pagina ufficiale di Google Calendar con disponibilità reali.</p>
     </section>
 
-    <!-- Embed inline -->
-    <section class="card">
-      <h2>Prenota direttamente qui</h2>
-      <p class="muted">Puoi completare la prenotazione senza uscire dal sito.</p>
-      <div class="row">
+    <!-- BOOKING: link, pulsanti popup e embed -->
+    <aside class="card">
+      <h2>Prenota subito</h2>
+      <p class="muted">Apri le pagine ufficiali di prenotazione o usa i pulsanti con popup.</p>
+
+      <div class="links bloc">
+        <div style="margin-bottom:10px">
+          <strong>Sessione col Producer</strong><br/>
+          <a id="linkProducer" href="https://calendar.google.com/calendar/appointments/schedules/AcZssZ35XKkoq4STBVRs0s7OfnYur9gnnDQG1LzkUR72RFjFsqwHefJL20ky4vkpD1sMMME4LI8_wGvq?gv=true" target="_blank" rel="noopener">Apri pagina di prenotazione</a>
+          <div id="btnProducer" style="margin-top:8px"></div>
+        </div>
+
         <div>
-          <h3>Sessione col Producer (embed)</h3>
+          <strong>Affitto Stanzetta</strong><br/>
+          <a id="linkRoom" href="https://calendar.app.google/NDBChqmthG7cWDfM6" target="_blank" rel="noopener">Apri pagina di prenotazione</a>
+          <div id="btnRoom" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <h3 style="margin:12px 0 8px">Prenota direttamente qui (embed)</h3>
+      <div class="bloc">
+        <div style="margin-bottom:12px">
+          <div class="muted" style="margin-bottom:6px">Sessione col Producer</div>
           <iframe src="https://calendar.google.com/calendar/appointments/schedules/AcZssZ35XKkoq4STBVRs0s7OfnYur9gnnDQG1LzkUR72RFjFsqwHefJL20ky4vkpD1sMMME4LI8_wGvq?gv=true" loading="lazy"></iframe>
         </div>
         <div>
-          <h3>Affitto Stanzetta (embed)</h3>
+          <div class="muted" style="margin-bottom:6px">Affitto Stanzetta</div>
           <iframe src="https://calendar.google.com/calendar/appointments/schedules/AcZssZ2KeUN7BKxf9P_00PqepyK0aOcEHHeKOneN_B-bpR7YFf-WYLfcWlHWEHnVKMzZqLdW6mSktyTy?gv=true" loading="lazy"></iframe>
         </div>
       </div>
-    </section>
+    </aside>
   </main>
 
   <script>
-    // URL ufficiali delle booking pages
+    // Link ufficiali (produttore/stanzetta)
     const LINKS = {
       producer: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ35XKkoq4STBVRs0s7OfnYur9gnnDQG1LzkUR72RFjFsqwHefJL20ky4vkpD1sMMME4LI8_wGvq?gv=true",
-      room:     "https://calendar.google.com/calendar/appointments/schedules/AcZssZ2KeUN7BKxf9P_00PqepyK0aOcEHHeKOneN_B-bpR7YFf-WYLfcWlHWEHnVKMzZqLdW6mSktyTy?gv=true"
+      room:     "https://calendar.app.google/NDBChqmthG7cWDfM6" // short link OK; il popup usa l'URL lungo nell'inizializzazione sotto
     };
 
-    // Inizializza i 2 pulsanti popup
+    // CHATBOT minimale (senza AI): porta ai link corretti
+    const logEl = document.getElementById('chatlog');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const quickEl = document.getElementById('quick');
+
+    function addBubble(html, who="bot"){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div class="bubble ${who}">${html}<div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>`;
+      logEl.appendChild(wrap.firstElementChild); logEl.scrollTop = logEl.scrollHeight;
+    }
+    const botSay = (t)=>addBubble(t,"bot");
+    const userSay = (t)=>addBubble(t,"user");
+    const setQuick = (arr=[])=>{
+      quickEl.innerHTML=""; arr.forEach(a=>{
+        const b=document.createElement('button'); b.className='pill'; b.textContent=a.label; b.onclick=a.onClick; quickEl.appendChild(b);
+      });
+    };
+    function start(){
+      botSay("Ciao! Vuoi prenotare una sessione col producer o affittare la stanzetta?");
+      setQuick([
+        {label:"Sessione col Producer", onClick:()=>go('producer')},
+        {label:"Affitto Stanzetta", onClick:()=>go('room')}
+      ]);
+      inputEl.focus();
+    }
+    function go(type){
+      const url = type==='producer' ? LINKS.producer : LINKS.room;
+      userSay(type==='producer' ? "Sessione col Producer" : "Affitto Stanzetta");
+      botSay("Perfetto! Ti apro la pagina ufficiale di prenotazione. Scegli data e ora libere e conferma.");
+      if(url && url.startsWith("http")) window.open(url, "_blank", "noopener");
+      else botSay("Ops, link non configurato.");
+      setQuick([
+        {label:"Apri di nuovo", onClick:()=>window.open(url,'_blank','noopener')},
+        {label:"Torna indietro", onClick:start}
+      ]);
+    }
+    function handleSend(){
+      const t = inputEl.value.trim(); if(!t) return;
+      userSay(t); inputEl.value="";
+      const s=t.toLowerCase();
+      if(s.includes("stanz")||s.includes("affitt")) go('room');
+      else if(s.includes("produc")||s.includes("session")) go('producer');
+      else botSay("Scrivi “sessione” o “stanzetta”, oppure usa i bottoni qui sotto.");
+    }
+    sendBtn.addEventListener('click', handleSend);
+    inputEl.addEventListener('keydown', e=>{ if(e.key==="Enter") handleSend(); });
+
+    // Pulsanti popup Google Calendar (usiamo URL lunghi per compatibilità)
     window.addEventListener('load', function(){
       if (window.calendar && calendar.schedulingButton) {
         calendar.schedulingButton.load({
-          url: LINKS.producer,
+          url: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ35XKkoq4STBVRs0s7OfnYur9gnnDQG1LzkUR72RFjFsqwHefJL20ky4vkpD1sMMME4LI8_wGvq?gv=true",
           color: '#039BE5',
           label: 'Prenota Sessione',
           target: document.getElementById('btnProducer')
         });
         calendar.schedulingButton.load({
-          url: LINKS.room,
+          url: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ2KeUN7BKxf9P_00PqepyK0aOcEHHeKOneN_B-bpR7YFf-WYLfcWlHWEHnVKMzZqLdW6mSktyTy?gv=true",
           color: '#039BE5',
           label: 'Prenota Stanzetta',
           target: document.getElementById('btnRoom')
         });
       }
     });
+
+    // aggiorna i link cliccabili
+    document.getElementById('linkProducer').href = LINKS.producer;
+    document.getElementById('linkRoom').href = LINKS.room;
+
+    start();
   </script>
 </body>
 </html>
